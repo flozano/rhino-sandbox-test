@@ -8,6 +8,7 @@
 		<junit.version>4.10</junit.version>
 		<logback.version>1.0.0</logback.version>
 		<slf4j.version>1.6.4</slf4j.version>
+		<rhino.version>1.7R3</rhino.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -51,6 +52,12 @@
 			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.mozilla</groupId>
+			<artifactId>rhino</artifactId>
+			<version>${rhino.version}</version>
+		</dependency>
+
 	</dependencies>
 	<repositories>
 		<repository>
