@@ -15,23 +15,23 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrapFactory;
 
-public class SandboxContextFactory extends ContextFactory {
+public class SandboxContextFactoryNo extends ContextFactory {
 	private final SandboxShutter shutter;
 
-	public SandboxContextFactory(SandboxShutter shutter) {
+	public SandboxContextFactoryNo(SandboxShutter shutter) {
 		this.shutter = shutter;
 	}
 
 	@Override
 	protected Context makeContext() {
-		Context cx = super.makeContext();
+		final Context cx = super.makeContext();
 		cx.setWrapFactory(new SandboxWrapFactory());
-		cx.setClassShutter(new ClassShutter() {
+		final ClassShutter s = new ClassShutter() {
 			private final Map<String, Boolean> nameToAccepted = new HashMap<String, Boolean>();
-
+			
 			// @Override
-			public boolean visibleToScripts(String name) {
-				Boolean granted = this.nameToAccepted.get(name);
+			public boolean visibleToScripts(String fullClassName) {
+				Boolean granted = this.nameToAccepted.get(fullClassName);
 
 				if (granted != null) {
 					return granted.booleanValue();
@@ -39,17 +39,18 @@ public class SandboxContextFactory extends ContextFactory {
 
 				Class<?> staticType;
 				try {
-					staticType = Class.forName(name);
+					staticType = Class.forName(fullClassName);
 				} catch (Exception exc) {
-					this.nameToAccepted.put(name, Boolean.FALSE);
+					this.nameToAccepted.put(fullClassName, Boolean.FALSE);
 					return false;
 				}
 
 				boolean grant = shutter.allowClassAccess(staticType);
-				this.nameToAccepted.put(name, Boolean.valueOf(grant));
+				this.nameToAccepted.put(fullClassName, Boolean.valueOf(grant));
 				return grant;
 			}
-		});
+		};
+		cx.setClassShutter(s);
 		return cx;
 	}
 
@@ -57,18 +58,15 @@ public class SandboxContextFactory extends ContextFactory {
 
 		@Override
 		public Scriptable wrapJavaClass(Context cx, Scriptable scope,
-				Class javaClass) {
-			Class<?> replaced = this.ensureReplacedClass(scope, null, javaClass);
-//			if (!javaClass.isPrimitive()) {
-//				replaceJavaNativeClass(javaClass, scope);
-//			}
-			return super.wrapJavaClass(cx, scope, replaced);
+				@SuppressWarnings("rawtypes") Class javaClass) {
+			this.ensureReplacedClass(scope, null, javaClass);
+			//this.replaceJavaNativeClass(javaClass, scope);
+			return super.wrapJavaClass(cx, scope, javaClass);
 		}
 
 		@Override
 		public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
 			this.ensureReplacedClass(scope, obj, null);
-
 			return super.wrapNewObject(cx, scope, obj);
 		}
 
@@ -76,7 +74,6 @@ public class SandboxContextFactory extends ContextFactory {
 		public Object wrap(Context cx, Scriptable scope, Object obj,
 				Class<?> staticType) {
 			this.ensureReplacedClass(scope, obj, staticType);
-
 			return super.wrap(cx, scope, obj, staticType);
 		}
 
@@ -88,7 +85,6 @@ public class SandboxContextFactory extends ContextFactory {
 
 			return new NativeJavaObject(scope, javaObject, staticType) {
 				private static final long serialVersionUID = 1L;
-
 				private final Map<String, Boolean> instanceMethodToAllowed = new HashMap<String, Boolean>();
 
 				@Override
@@ -130,7 +126,7 @@ public class SandboxContextFactory extends ContextFactory {
 			final Class<?> type = (staticType == null && obj != null) ? obj
 					.getClass() : staticType;
 
-			if (!type.isPrimitive() /* && !type.getName().startsWith("java.") */
+			if (!type.isPrimitive()  && !type.getName().startsWith("java.") 
 					&& this.replacedClasses.add(type)) {
 				this.replaceJavaNativeClass(type, scope);
 			}
@@ -144,23 +140,17 @@ public class SandboxContextFactory extends ContextFactory {
 					ScriptableObject.getProperty(scope, "Packages"),
 					Object.class);
 			Object holder = null;
-			String[] parts = type.getName().split("\\.");
-			for (String part : parts/* Text.split(type.getName(), '.') */) {
+			for (String part : type.getName().split(type.getName(), '.')) {
 				holder = clazz;
-				try {
-					clazz = ScriptableObject.getProperty((Scriptable) clazz,
-							part);
-				} catch (Throwable t) {
-					t.printStackTrace();
-				}
+				clazz = ScriptableObject.getProperty((Scriptable) clazz, part);
 			}
-			if (!(clazz instanceof NativeJavaClass)) {
-				return;
-			}
+//			if (!(clazz instanceof NativeJavaClass))
+//				return;
 
 			NativeJavaClass nativeClass = (NativeJavaClass) clazz;
 
 			nativeClass = new NativeJavaClass(scope, type) {
+
 				private static final long serialVersionUID = 1L;
 
 				@Override
