@@ -57,12 +57,7 @@ public class SandboxContextFactory extends ContextFactory {
 
 		@Override
 		public Scriptable wrapJavaClass(Context cx, Scriptable scope,
-				final Class javaClass) {
-			// Class<?> replaced = this
-			// .ensureReplacedClass(scope, null, javaClass);
-			// if (!javaClass.isPrimitive()) {
-			// replaceJavaNativeClass(javaClass, scope);
-			// }
+				@SuppressWarnings("rawtypes") final Class javaClass) {
 			return new NativeJavaClass(scope, javaClass) {
 				private static final long serialVersionUID = 1L;
 
