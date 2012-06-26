@@ -57,12 +57,34 @@ public class SandboxContextFactory extends ContextFactory {
 
 		@Override
 		public Scriptable wrapJavaClass(Context cx, Scriptable scope,
-				Class javaClass) {
-			Class<?> replaced = this.ensureReplacedClass(scope, null, javaClass);
-//			if (!javaClass.isPrimitive()) {
-//				replaceJavaNativeClass(javaClass, scope);
-//			}
-			return super.wrapJavaClass(cx, scope, replaced);
+				final Class javaClass) {
+			// Class<?> replaced = this
+			// .ensureReplacedClass(scope, null, javaClass);
+			// if (!javaClass.isPrimitive()) {
+			// replaceJavaNativeClass(javaClass, scope);
+			// }
+			return new NativeJavaClass(scope, javaClass) {
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public Object get(String name, Scriptable start) {
+					Object wrapped = super.get(name, start);
+
+					if (wrapped instanceof BaseFunction) {
+						if (!shutter.allowStaticMethodAccess(javaClass, name)) {
+							return NOT_FOUND;
+						}
+					} else {
+						// NativeJavaObject + only boxed primitive types?
+						if (!shutter.allowStaticFieldAccess(javaClass, name)) {
+							return NOT_FOUND;
+						}
+					}
+
+					return wrapped;
+				}
+			};
+			// return super.wrapJavaClass(cx, scope, replaced);
 		}
 
 		@Override
@@ -130,7 +152,7 @@ public class SandboxContextFactory extends ContextFactory {
 			final Class<?> type = (staticType == null && obj != null) ? obj
 					.getClass() : staticType;
 
-			if (!type.isPrimitive() /* && !type.getName().startsWith("java.") */
+			if (!type.isPrimitive() && !type.getName().startsWith("java.")
 					&& this.replacedClasses.add(type)) {
 				this.replaceJavaNativeClass(type, scope);
 			}
@@ -147,12 +169,7 @@ public class SandboxContextFactory extends ContextFactory {
 			String[] parts = type.getName().split("\\.");
 			for (String part : parts/* Text.split(type.getName(), '.') */) {
 				holder = clazz;
-				try {
-					clazz = ScriptableObject.getProperty((Scriptable) clazz,
-							part);
-				} catch (Throwable t) {
-					t.printStackTrace();
-				}
+				clazz = ScriptableObject.getProperty((Scriptable) clazz, part);
 			}
 			if (!(clazz instanceof NativeJavaClass)) {
 				return;

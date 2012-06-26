@@ -3,20 +3,21 @@ package com.flozano.rhino.sandbox;
 import java.io.IOException;
 import java.io.Reader;
 
+import org.junit.Assert;
+import org.junit.Test;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ImporterTopLevel;
 import org.mozilla.javascript.Scriptable;
 
-import com.flozano.rhino.sandbox.impl.DummySandboxShutterImpl;
+public class ScriptExecutorExample {
 
-public class ScriptExecutor {
-	public static void main(String[] argz) throws IOException {
+	@Test
+	public void testItOK() throws IOException {
 		ContextFactory.initGlobal(new SandboxContextFactory(
-				new DummySandboxShutterImpl()));
-
+				new PrefixSandboxShutterImpl("java", "com.flozano")));
 		// create and initialize Rhino Context
-		Context cx = Context.enter();
+		Context cx = ContextFactory.getGlobal().enterContext();
 		Scriptable prototype = cx.initStandardObjects();
 		Scriptable topLevel = new ImporterTopLevel(cx);
 		prototype.setParentScope(topLevel);
@@ -24,5 +25,7 @@ public class ScriptExecutor {
 		scope.setPrototype(prototype);
 		Reader s = Util.loadJS("/sample1.js");
 		cx.evaluateReader(scope, s, "sample1", 1, null);
+		Assert.assertTrue(true);
 	}
+	
 }
