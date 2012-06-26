@@ -1,0 +1,1 @@
+var map = new com.flozano.rhino.sandbox.GoodClassExtendsBadClass()

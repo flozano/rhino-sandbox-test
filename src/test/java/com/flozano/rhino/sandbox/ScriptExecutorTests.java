@@ -48,6 +48,8 @@ public class ScriptExecutorTests {
 		Assert.assertTrue(false);
 	}
 	
+
+	
 	@Test(expected=Throwable.class)
 	public void testAccessToClass() throws IOException {
 		// create and initialize Rhino Context
@@ -61,5 +63,18 @@ public class ScriptExecutorTests {
 		cx.evaluateReader(scope, s, "sample3", 1, null);
 		Assert.assertTrue(false);
 	}
-
+	
+	// @Test(expected=Throwable.class)
+	@Test
+	public void testGoodClassExtendsBadClass() throws IOException {
+		// create and initialize Rhino Context
+		Context cx = ContextFactory.getGlobal().enterContext();
+		Scriptable prototype = cx.initStandardObjects();
+		Scriptable topLevel = new ImporterTopLevel(cx);
+		prototype.setParentScope(topLevel);
+		Scriptable scope = cx.newObject(prototype);
+		scope.setPrototype(prototype);
+		Reader s = Util.loadJS("/sample4.js");
+		cx.evaluateReader(scope, s, "sample4", 1, null);
+		Assert.assertTrue(true);	}
 }
